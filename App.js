@@ -1,114 +1,91 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow
- */
+import React, {Component} from 'react';
+import {View, Text} from 'react-native';
+import firebase, {Notification, NotificationOpen} from 'react-native-firebase';
 
-import React from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  ScrollView,
-  View,
-  Text,
-  StatusBar,
-} from 'react-native';
+export default class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {};
+  }
 
-import {
-  Header,
-  LearnMoreLinks,
-  Colors,
-  DebugInstructions,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  async componentDidMount() {
+    this.initNotification();
 
-const App: () => React$Node = () => {
-  return (
-    <>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          style={styles.scrollView}>
-          <Header />
-          {global.HermesInternal == null ? null : (
-            <View style={styles.engine}>
-              <Text style={styles.footer}>Engine: Hermes</Text>
-            </View>
-          )}
-          <View style={styles.body}>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Step One</Text>
-              <Text style={styles.sectionDescription}>
-                Edit <Text style={styles.highlight}>App.js</Text> to change this
-                screen and then come back to see your edits.
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>See Your Changes</Text>
-              <Text style={styles.sectionDescription}>
-                <ReloadInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Debug</Text>
-              <Text style={styles.sectionDescription}>
-                <DebugInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Learn More</Text>
-              <Text style={styles.sectionDescription}>
-                Read the docs to discover what to do next:
-              </Text>
-            </View>
-            <LearnMoreLinks />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
-  );
-};
+    // #-----Listen for Notifications
+    // IOS Only
+    this.removeNotificationDisplayedListener = firebase
+      .notifications()
+      .onNotificationDisplayed(notification => {
+        console.log('1: ', notification);
+      });
 
-const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: Colors.lighter,
-  },
-  engine: {
-    position: 'absolute',
-    right: 0,
-  },
-  body: {
-    backgroundColor: Colors.white,
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.black,
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-    color: Colors.dark,
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-  footer: {
-    color: Colors.dark,
-    fontSize: 12,
-    fontWeight: '600',
-    padding: 4,
-    paddingRight: 12,
-    textAlign: 'right',
-  },
-});
+    // Android
+    this.removeNotificationListener = firebase
+      .notifications()
+      .onNotification(notification => {
+        console.log('2: ', notification);
+      });
+    // -----#
 
-export default App;
+    // #----- Listen for a Notification being opened
+    //App in Foreground and background
+    this.removeNotificationOpenedListener = firebase
+      .notifications()
+      .onNotificationOpened(notificationOpen => {
+        // Get the action triggered by the notification being opened
+        const action = notificationOpen.action;
+        // Get information about the notification that was opened
+        const notification = notificationOpen.notification;
+
+        console.log('action: ', action);
+        console.log('notification: ', notification);
+      });
+
+    // App Closed
+    const notificationOpen = await firebase
+      .notifications()
+      .getInitialNotification();
+    if (notificationOpen) {
+      // App was opened by a notification
+      // Get the action triggered by the notification being opened
+      const action = notificationOpen.action;
+      // Get information about the notification that was opened
+      const notification = notificationOpen.notification;
+
+      console.log('app closed');
+      console.log('action: ', action);
+      console.log('notification: ', notification);
+    }
+  }
+
+  componentWillUnmount() {
+    this.removeNotificationDisplayedListener();
+    this.removeNotificationListener();
+    this.removeNotificationOpenedListener();
+  }
+
+  initNotification = async () => {
+    await this.setPermission();
+    const fcmToken = await firebase.messaging().getToken();
+    console.log('fcmToken', fcmToken);
+  };
+
+  setPermission = async () => {
+    try {
+      const enabled = await firebase.messaging().hasPermission();
+      if (!enabled) {
+        await firebase.messaging().requestPermission();
+      }
+    } catch (error) {
+      console.log('error', error);
+    }
+  };
+
+  render() {
+    return (
+      <View>
+        <Text> App </Text>
+      </View>
+    );
+  }
+}
